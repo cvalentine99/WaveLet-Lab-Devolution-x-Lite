@@ -1,0 +1,83 @@
+"""
+API Schema Models
+
+Pydantic models for REST API request/response validation.
+"""
+
+from rf_forensics.api.schemas.backend import (
+    CFARConfigModel,
+    ClusterModel,
+    ConfigUpdateModel,
+    DetectionModel,
+    DuplexerBandModel,
+    DuplexerBandsResponse,
+    PipelineConfigModel,
+    RecordingInfo,
+    SDRConfigModel,
+    SDRConnectRequest,
+    SDRConnectResponse,
+    SDRDevBoardModel,
+    SDRDeviceListResponse,
+    SDRDeviceModel,
+    SDRFullConfigModel,
+    SDRGainModel,
+    SDRStatusModel,
+    SetBandRequest,
+    StartRecordingRequest,
+    StartRecordingResponse,
+    StatusModel,
+    StopRecordingRequest,
+    StopRecordingResponse,
+    SuccessResponse,
+)
+from rf_forensics.api.schemas.frontend import (
+    FrontendCFARConfig,
+    FrontendClusteringConfig,
+    FrontendConfig,
+    FrontendMonitoringStartRequest,
+    FrontendMonitoringStopRequest,
+    FrontendPipelineConfig,
+    FrontendRecordingStartRequest,
+    FrontendRecordingStopRequest,
+    FrontendSDRConfig,
+    FrontendSDRConfigRequest,
+)
+
+__all__ = [
+    # Backend models
+    "SDRConfigModel",
+    "PipelineConfigModel",
+    "CFARConfigModel",
+    "ConfigUpdateModel",
+    "DetectionModel",
+    "ClusterModel",
+    "StatusModel",
+    "SuccessResponse",
+    "StartRecordingRequest",
+    "StartRecordingResponse",
+    "StopRecordingRequest",
+    "StopRecordingResponse",
+    "RecordingInfo",
+    "SDRDeviceModel",
+    "SDRDeviceListResponse",
+    "SDRConnectRequest",
+    "SDRConnectResponse",
+    "SDRGainModel",
+    "SDRDevBoardModel",
+    "SDRFullConfigModel",
+    "SDRStatusModel",
+    "DuplexerBandModel",
+    "DuplexerBandsResponse",
+    "SetBandRequest",
+    # Frontend models
+    "FrontendSDRConfig",
+    "FrontendPipelineConfig",
+    "FrontendCFARConfig",
+    "FrontendClusteringConfig",
+    "FrontendConfig",
+    "FrontendSDRConfigRequest",
+    "FrontendMonitoringStartRequest",
+    "FrontendMonitoringStopRequest",
+    "FrontendRecordingStartRequest",
+    "FrontendRecordingStopRequest",
+]

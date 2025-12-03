@@ -1,0 +1,168 @@
+# Docker Compose for Holoscan RF Forensics Pipeline
+# Builds and runs the high-performance C++ pipeline with uSDR hardware
+
+version: '3.8'
+
+services:
+  # =============================================================================
+  # Holoscan Build Environment
+  # =============================================================================
+  holoscan-build:
+    build:
+      context: ..
+      dockerfile: holoscan/Dockerfile.holoscan
+    image: rf-forensics-holoscan:latest
+    container_name: rf-forensics-holoscan-build
+    volumes:
+      - ../:/app
+      - /tmp/usdr-lib-main:/opt/usdr-lib:ro
+    working_dir: /app/holoscan/build
+    command: |
+      bash -c "
+        cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_PYTHON_BINDINGS=ON &&
+        make -j$(nproc) &&
+        echo 'Build complete!'
+      "
+
+  # =============================================================================
+  # Holoscan Runtime (50 MSPS Pipeline)
+  # =============================================================================
+  holoscan-runtime:
+    image: rf-forensics-holoscan:latest
+    container_name: rf-forensics-holoscan
+    runtime: nvidia
+    privileged: true
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - CUDA_VISIBLE_DEVICES=0
+    volumes:
+      # Application
+      - ../:/app
+      # uSDR PCIe device access
+      - /dev:/dev
+      # Kernel modules for PCIe driver
+      - /lib/modules:/lib/modules:ro
+    devices:
+      # PCIe SDR (Xilinx FPGA)
+      - /dev/usdr0:/dev/usdr0
+    cap_add:
+      - SYS_RAWIO
+      - IPC_LOCK
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    shm_size: '2gb'
+    working_dir: /app/holoscan
+    command: [
+      "/app/holoscan/build/rf_forensics_app",
+      "--config", "/app/holoscan/rf_forensics.yaml"
+    ]
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "rf_forensics_app"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+
+  # =============================================================================
+  # Holoscan Development Shell
+  # =============================================================================
+  holoscan-dev:
+    image: rf-forensics-holoscan:latest
+    container_name: rf-forensics-holoscan-dev
+    runtime: nvidia
+    privileged: true
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+    volumes:
+      - ../:/app
+      - /tmp/usdr-lib-main:/opt/usdr-lib:ro
+      - /dev:/dev
+    devices:
+      - /dev/usdr0:/dev/usdr0
+    cap_add:
+      - SYS_RAWIO
+      - IPC_LOCK
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    shm_size: '2gb'
+    working_dir: /app/holoscan
+    stdin_open: true
+    tty: true
+    command: bash
+
+  # =============================================================================
+  # Holoscan + Python API Bridge (Hybrid Mode)
+  # =============================================================================
+  holoscan-hybrid:
+    image: rf-forensics-holoscan:latest
+    container_name: rf-forensics-hybrid
+    runtime: nvidia
+    privileged: true
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - PYTHONPATH=/app:/app/holoscan/build
+    volumes:
+      - ../:/app
+      - /dev:/dev
+    devices:
+      - /dev/usdr0:/dev/usdr0
+    ports:
+      - "8000:8000"   # REST API
+      - "8765:8765"   # WebSocket
+    cap_add:
+      - SYS_RAWIO
+      - IPC_LOCK
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    shm_size: '2gb'
+    working_dir: /app
+    command: [
+      "python3", "-m", "rf_forensics.main",
+      "--holoscan", "--config", "/app/holoscan/rf_forensics.yaml"
+    ]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # =============================================================================
+  # Performance Benchmark
+  # =============================================================================
+  holoscan-bench:
+    image: rf-forensics-holoscan:latest
+    container_name: rf-forensics-bench
+    runtime: nvidia
+    privileged: true
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+    volumes:
+      - ../:/app
+      - /dev:/dev
+    devices:
+      - /dev/usdr0:/dev/usdr0
+    cap_add:
+      - SYS_RAWIO
+      - IPC_LOCK
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    shm_size: '2gb'
+    working_dir: /app/holoscan
+    command: |
+      bash -c "
+        echo '=== RF Forensics Holoscan Benchmark ==='
+        echo 'Target: 50 MSPS sustained throughput'
+        echo ''
+        /app/holoscan/build/rf_forensics_app \
+          --config /app/holoscan/rf_forensics.yaml \
+          --benchmark \
+          --duration 60
+      "

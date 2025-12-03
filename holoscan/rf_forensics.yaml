@@ -1,0 +1,88 @@
+# RF Forensics Holoscan Pipeline Configuration
+# Target: 50 MSPS throughput, <1ms latency
+# Hardware: uSDR DevBoard (PCIe x2, LMS6002D, 65 MSPS max)
+
+# =============================================================================
+# SDR Configuration (uSDR DevBoard)
+# =============================================================================
+sdr:
+  center_freq: 915.0e6       # Center frequency (Hz) - 915 MHz ISM band
+  sample_rate: 50.0e6        # Sample rate (Hz) - 50 MSPS
+  bandwidth: 40.0e6          # RF bandwidth (Hz) - max supported
+  buffer_size: 65536         # Samples per buffer (~1.3ms at 50 MSPS)
+
+  # Gain configuration (3-stage)
+  gain_lna: 20               # LNA gain (dB) 0-30
+  gain_tia: 9                # TIA gain (dB) 0,3,9,12
+  gain_pga: 12               # PGA gain (dB) 0-32
+
+  # Antenna path
+  rx_path: "LNAL"            # LNAH, LNAL, LNAW
+
+  # DevBoard controls
+  lna_enable: true           # External LNA
+  attenuator_db: 0           # RX attenuator 0-18 dB
+
+  # Mode
+  simulate: false            # Use real hardware
+  use_cuda_register: true    # Register DMA buffers with CUDA
+
+# =============================================================================
+# PSD Configuration (Welch's Method)
+# =============================================================================
+psd:
+  fft_size: 2048             # FFT size (frequency resolution)
+  overlap: 0.5               # Segment overlap ratio (50%)
+  window: "hann"             # Window function
+  max_segments: 256          # Max segments for averaging
+
+# =============================================================================
+# CFAR Configuration (Cell-Averaging)
+# =============================================================================
+cfar:
+  num_reference: 32          # Reference cells (16 each side)
+  num_guard: 4               # Guard cells (2 each side)
+  pfa: 1.0e-6                # Probability of false alarm
+  min_snr: 6.0               # Minimum SNR for detection (dB)
+  max_peaks: 128             # Maximum peaks to extract
+
+# =============================================================================
+# Holoscan Scheduler Configuration
+# =============================================================================
+scheduler:
+  worker_thread_number: 4    # Worker threads (match CPU cores)
+  stop_on_deadlock: true
+  stop_on_deadlock_timeout: 5000  # ms
+
+# =============================================================================
+# Logging
+# =============================================================================
+logging:
+  level: "INFO"              # DEBUG, INFO, WARN, ERROR
+  format: "[%H:%M:%S.%e] [%l] %v"
+
+# =============================================================================
+# Performance Targets
+# =============================================================================
+# Throughput:  50 MSPS sustained (100% of SDR rate)
+# Latency:     <1ms end-to-end (buffer_size/sample_rate = 1.3ms)
+# Memory:      Zero per-frame allocations (pre-allocated buffers)
+# CPU:         <5% usage (GPU-accelerated)
+# GPU Memory:  ~100 MB (fixed allocation)
+
+# =============================================================================
+# Pipeline Topology
+# =============================================================================
+# USDRSourceOp (PCIe DMA)
+#      │
+#      ▼
+#   PSDOp (Welch FFT) ──── [PSD to API bridge]
+#      │
+#      ▼
+#   CFAROp (CA-CFAR)
+#      │
+#      ▼
+#   PeakOp (Peak extraction) ──── [Detections to API bridge]
+#      │
+#      ▼
+#   [Recording sink if enabled]

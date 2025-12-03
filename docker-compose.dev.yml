@@ -1,0 +1,49 @@
+# RF Forensics - Development Overrides
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    volumes:
+      # Mount source for live reload
+      - ./backend/src:/app/src:ro
+      - ./backend/tests:/app/tests:ro
+      - ./backend/scripts:/app/scripts:ro
+      # Recordings need writable storage
+      - recordings_data:/data/recordings
+    environment:
+      - RF_RECORDINGS_DIR=/data/recordings
+      - DEBUG=1
+      - LOG_LEVEL=DEBUG
+      - PYTHONDONTWRITEBYTECODE=1
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:3001,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:3001,http://127.0.0.1:5173
+    # Run the RF forensics engine
+    command: ["python", "-m", "rf_forensics"]
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    volumes:
+      # Mount source for hot reload
+      - ./frontend/src:/app/src:ro
+      - ./frontend/public:/app/public:ro
+    environment:
+      - NODE_ENV=development
+      - VITE_API_URL=http://localhost:8000
+      - VITE_WS_URL=ws://localhost:8765
+    # Use Vite dev server instead of nginx
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+    ports:
+      - "3000:5173"   # Vite dev server port
+
+  holoscan:
+    volumes:
+      - ./holoscan/src:/app/holoscan/src:ro
+      - ./holoscan/python:/app/holoscan/python:ro
+    environment:
+      - DEBUG=1

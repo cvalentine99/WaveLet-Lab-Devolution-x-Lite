@@ -1,0 +1,139 @@
+# RF Forensics - Docker Compose
+# Three-service architecture: Backend, Frontend, Holoscan
+version: '3.8'
+
+services:
+  # ===========================================================================
+  # Backend - Python FastAPI + WebSocket Server
+  # ===========================================================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: rf-forensics-backend:latest
+    container_name: rf-forensics-backend
+    runtime: nvidia
+    privileged: true
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - CORS_ORIGINS=http://localhost:3000,http://frontend:80
+      - RECORDINGS_DIR=/data/recordings
+      - LOGS_DIR=/var/log/rf_forensics
+      - HOLOSCAN_ENDPOINT=holoscan:9000
+      - RF_CONFIG_PATH=/app/config/defaults.yaml
+    volumes:
+      - recordings_data:/data/recordings
+      - logs_data:/var/log/rf_forensics
+      - ./config:/app/config:ro
+      - /dev:/dev
+      - /lib/modules:/lib/modules:ro
+    devices:
+      - /dev/usdr0:/dev/usdr0
+    cap_add:
+      - SYS_RAWIO
+      - IPC_LOCK
+    ports:
+      - "8000:8000"   # REST API
+      - "8765:8765"   # WebSocket
+    networks:
+      - rf-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  # ===========================================================================
+  # Frontend - React + Nginx
+  # ===========================================================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: rf-forensics-frontend:latest
+    container_name: rf-forensics-frontend
+    ports:
+      - "3000:80"
+    networks:
+      - rf-network
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+  # ===========================================================================
+  # Holoscan - C++ High-Performance Pipeline (50 MSPS)
+  # ===========================================================================
+  holoscan:
+    build:
+      context: ./holoscan
+      dockerfile: Dockerfile
+    image: rf-forensics-holoscan:latest
+    container_name: rf-forensics-holoscan
+    runtime: nvidia
+    privileged: true
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - CUDA_VISIBLE_DEVICES=0
+    volumes:
+      - ./config:/app/config:ro
+      # uSDR PCIe device access
+      - /dev:/dev
+      - /lib/modules:/lib/modules:ro
+    devices:
+      # PCIe SDR (Xilinx FPGA) - uncomment if present
+      # - /dev/usdr0:/dev/usdr0
+      - /dev/bus/usb:/dev/bus/usb
+    cap_add:
+      - SYS_RAWIO
+      - IPC_LOCK
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    shm_size: '2gb'
+    ports:
+      - "9000:9000"   # Holoscan data port
+    networks:
+      - rf-network
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "rf_forensics_app"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+networks:
+  rf-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+volumes:
+  recordings_data:
+    name: rf-forensics-recordings
+  logs_data:
+    name: rf-forensics-logs

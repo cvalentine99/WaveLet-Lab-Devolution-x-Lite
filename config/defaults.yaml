@@ -1,0 +1,52 @@
+# GPU RF Forensics Engine - Default Configuration
+# Version 1.0
+
+sdr:
+  device_type: usdr  # usrp, hackrf, limesdr, rtlsdr, usdr
+  device_args: ""
+  center_freq_hz: 915000000  # 915 MHz (ISM band)
+  sample_rate_hz: 20000000   # 20 MSps
+  bandwidth_hz: 20000000     # 20 MHz
+  gain_db: 40.0
+  antenna: "TX/RX"
+
+buffer:
+  samples_per_buffer: 20000000  # 20M samples per buffer
+  num_ring_segments: 4          # 4-segment ring buffer
+  use_pinned_memory: true
+
+fft:
+  fft_size: 1024
+  window_type: hann    # hann, hamming, blackman, kaiser, flattop
+  overlap_percent: 50.0
+  averaging_count: 16
+
+cfar:
+  num_reference_cells: 32
+  num_guard_cells: 4
+  pfa: 0.000001  # 1e-6
+  variant: CA    # CA, GO, SO, OS
+
+clustering:
+  eps: 0.5
+  min_samples: 5
+  auto_tune: true
+
+websocket:
+  host: "0.0.0.0"
+  port: 8765
+  spectrum_update_rate_hz: 30.0
+  max_clients: 10
+
+api:
+  host: "0.0.0.0"
+  port: 8000
+  enable_cors: true
+  cors_origins:
+    - "*"
+
+logging:
+  level: INFO
+  log_file: null
+  log_to_console: true
+  log_performance_metrics: true
