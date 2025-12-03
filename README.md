@@ -1,6 +1,7 @@
 # WaveLet Lab Devolution-x-Lite
 
 **GPU-Accelerated RF Signal Forensics Platform**
+<img width="1427" height="933" alt="image" src="https://github.com/user-attachments/assets/fdd9f111-12e6-40b4-bbd2-dabc53efddba" />
 
 Real-time spectrum monitoring and signal analysis with CUDA-powered processing, designed for the Wavelet Lab uSDR DevBoard.
 
