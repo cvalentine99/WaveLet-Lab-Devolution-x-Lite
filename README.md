@@ -26,8 +26,7 @@ Real-time spectrum monitoring and signal analysis with CUDA-powered processing, 
 | SDR | Status | Max Sample Rate |
 |-----|--------|-----------------|
 | **uSDR DevBoard** | Full Support | 61.44 MSPS |
-| USRP B200/B210 | Planned | 56 MSPS |
-| HackRF | Planned | 20 MSPS |
+
 
 ---
 
