@@ -1,4 +1,5 @@
 # WaveLet Lab Devolution-x-Lite
+<img width="397" height="958" alt="image" src="https://github.com/user-attachments/assets/60db82f9-2023-4929-8d2f-d6f5d59e454d" />
 
 **GPU-Accelerated RF Signal Forensics Platform**
 <img width="1427" height="933" alt="image" src="https://github.com/user-attachments/assets/fdd9f111-12e6-40b4-bbd2-dabc53efddba" />
@@ -107,7 +108,7 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed installation instructions.
 
 ---
 
-## API Endpoints
+## API Endpointst
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
